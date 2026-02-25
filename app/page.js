@@ -11,15 +11,7 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [log, setLog] = useState([]);
 
-  const colors = {
-    primary: '#FF6B6B',
-    secondary: '#4ECDC4',
-    accent: '#45B7D1',
-    warm: '#FFA07A',
-    soft: '#98D8C8'
-  };
-
-  const addLog = (msg) => setLog(l => [...l, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  const addLog = (msg) => setLog(l => [...l, msg]);
 
   const generate = async () => {
     if (!prompt) return;
@@ -29,10 +21,10 @@ export default function Home() {
     setSvg(null);
     setLog([]);
     
-    addLog('Starting generation...');
+    addLog('Starting');
     
     try {
-      addLog('Calling Venice API...');
+      addLog('Generating');
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,18 +32,17 @@ export default function Home() {
       });
       
       const data = await res.json();
-      addLog(`Response status: ${res.status}`);
       
       if (res.ok && data.imageUrl) {
         setImage(data.imageUrl);
-        addLog('Image generated successfully! ✨');
+        addLog('Done');
       } else {
-        setError(data.error || 'Failed to generate image');
-        addLog(`Error: ${data.error}`);
+        setError(data.error || 'Error');
+        addLog('Error');
       }
     } catch (e) {
       setError(e.message);
-      addLog(`Exception: ${e.message}`);
+      addLog('Error');
     }
     
     setLoading(false);
@@ -62,10 +53,9 @@ export default function Home() {
     
     setVectorizing(true);
     setError(null);
-    addLog('Starting vectorization...');
+    addLog('Vectorizing');
     
     try {
-      addLog('Processing image with ImageTracer...');
       const res = await fetch('/api/vectorize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,18 +63,15 @@ export default function Home() {
       });
       
       const data = await res.json();
-      addLog(`Response status: ${res.status}`);
       
       if (res.ok && data.svg) {
         setSvg(data.svg);
-        addLog('Vectorization complete! 🎉');
+        addLog('Complete');
       } else {
-        setError(data.error || 'Failed to vectorize');
-        addLog(`Error: ${data.error}`);
+        setError(data.error || 'Error');
       }
     } catch (e) {
       setError(e.message);
-      addLog(`Exception: ${e.message}`);
     }
     
     setVectorizing(false);
@@ -96,106 +83,60 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'vectorvision-vector.svg';
+    a.download = 'vector.svg';
     a.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: '#FFFBF5', 
-      color: '#2D3436',
-      fontFamily: 'Nunito, sans-serif'
+      background: '#FFFFFF', 
+      color: '#000000',
+      fontFamily: 'Inter, Helvetica Neue, Arial, sans-serif'
     }}>
-      {/* Decorative Header Shapes */}
-      <div style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        height: '200px', 
-        background: `linear-gradient(135deg, ${colors.primary}15 0%, ${colors.secondary}15 100%)`,
-        zIndex: 0,
-        borderRadius: '0 0 50% 50% / 0 0 30px 30px'
-      }} />
-      
-      {/* Floating Decorations */}
-      <div style={{ position: 'fixed', top: '10%', left: '5%', fontSize: '40px', opacity: 0.3, zIndex: 0 }}>🎨</div>
-      <div style={{ position: 'fixed', top: '20%', right: '8%', fontSize: '30px', opacity: 0.3, zIndex: 0 }}>✏️</div>
-      <div style={{ position: 'fixed', bottom: '15%', left: '10%', fontSize: '25px', opacity: 0.3, zIndex: 0 }}>🖌️</div>
-      <div style={{ position: 'fixed', bottom: '20%', right: '5%', fontSize: '35px', opacity: 0.3, zIndex: 0 }}>📐</div>
-
       {/* Header */}
       <header style={{ 
-        position: 'relative',
-        zIndex: 1,
-        padding: '2rem',
+        padding: '3rem 2rem',
+        borderBottom: '1px solid #E0E0E0',
         textAlign: 'center'
       }}>
         <h1 style={{ 
-          fontFamily: 'Fredoka One, cursive', 
-          fontSize: '3rem', 
+          fontSize: '1.5rem', 
+          fontWeight: 300,
           margin: 0,
-          color: colors.primary,
-          textShadow: '3px 3px 0 ' + colors.secondary,
-          letterSpacing: '2px'
+          letterSpacing: '0.3em',
+          textTransform: 'uppercase'
         }}>
-          ✨ VectorVision ✨
+          VectorVision
         </h1>
-        <p style={{ 
-          fontFamily: 'Nunito, sans-serif', 
-          fontSize: '1.1rem', 
-          color: '#636E72',
-          marginTop: '0.5rem'
-        }}>
-          Create magical illustrations → Convert to Vector SVG
-        </p>
       </header>
 
-      {/* Main Content */}
+      {/* Main */}
       <main style={{ 
-        position: 'relative',
-        zIndex: 1,
-        maxWidth: '700px', 
+        maxWidth: '600px', 
         margin: '0 auto', 
-        padding: '0 1.5rem 3rem' 
+        padding: '4rem 2rem' 
       }}>
         
-        {/* Input Card */}
-        <div style={{ 
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '2rem',
-          marginBottom: '1.5rem',
-          boxShadow: '8px 8px 0 ' + colors.secondary,
-          border: '3px solid #2D3436'
-        }}>
-          <label style={{ 
-            display: 'block',
-            fontFamily: 'Fredoka One, cursive',
-            fontSize: '1.2rem',
-            color: colors.accent,
-            marginBottom: '0.75rem'
-          }}>
-            🎯 What would you like to create?
-          </label>
+        {/* Input */}
+        <div style={{ marginBottom: '3rem' }}>
           <textarea 
             value={prompt} 
             onChange={e => setPrompt(e.target.value)} 
-            placeholder="A beautiful diagram of a flower cell with colorful organelles..."
+            placeholder="Describe your visualization"
             style={{ 
               width: '100%', 
-              padding: '1rem', 
-              border: '3px solid #DFE6E9',
-              borderRadius: '16px',
-              background: '#F8F9FA',
-              color: '#2D3436',
-              fontFamily: 'Nunito, sans-serif',
+              padding: '1.5rem', 
+              border: '1px solid #E0E0E0',
+              borderRadius: '0',
+              background: '#FFFFFF',
+              color: '#000000',
               fontSize: '1rem',
-              minHeight: '100px', 
+              fontFamily: 'inherit',
+              minHeight: '120px', 
               resize: 'vertical',
-              outline: 'none'
+              outline: 'none',
+              fontWeight: 300
             }} 
           />
         </div>
@@ -203,253 +144,189 @@ export default function Home() {
         {/* Controls */}
         <div style={{ 
           display: 'flex', 
-          gap: '1rem', 
-          alignItems: 'flex-end',
-          marginBottom: '2rem',
-          flexWrap: 'wrap'
+          gap: '2rem', 
+          alignItems: 'center',
+          marginBottom: '4rem'
         }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ 
-              display: 'block',
-              fontFamily: 'Fredoka One, cursive',
-              fontSize: '1rem',
-              color: colors.warm,
-              marginBottom: '0.5rem'
-            }}>
-              🎨 Style
-            </label>
-            <select 
-              value={style} 
-              onChange={e => setStyle(e.target.value)} 
-              style={{ 
-                width: '100%',
-                padding: '1rem', 
-                border: '3px solid #DFE6E9',
-                borderRadius: '16px',
-                background: '#FFFFFF',
-                color: '#2D3436',
-                fontFamily: 'Nunito, sans-serif',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              <option value="watercolor">🌸 Watercolor Whimsical</option>
-              <option value="scientific">🔬 Scientific Diagram</option>
-              <option value="schematic">📐 Technical Schematic</option>
-              <option value="illustration">✏️ Detailed Illustration</option>
-            </select>
-          </div>
+          <select 
+            value={style} 
+            onChange={e => setStyle(e.target.value)} 
+            style={{ 
+              flex: 1,
+              padding: '1rem 0', 
+              border: 'none',
+              borderBottom: '1px solid #E0E0E0',
+              background: 'transparent',
+              color: '#000000',
+              fontSize: '0.875rem',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              outline: 'none',
+              fontWeight: 300
+            }}
+          >
+            <option value="watercolor">Watercolor Whimsical</option>
+            <option value="scientific">Scientific Diagram</option>
+            <option value="schematic">Technical Schematic</option>
+            <option value="illustration">Detailed Illustration</option>
+          </select>
           
           <button 
             onClick={generate} 
             disabled={loading || !prompt}
             style={{ 
-              padding: '1rem 2.5rem', 
-              border: '3px solid #2D3436',
-              borderRadius: '16px',
-              background: loading ? '#DFE6E9' : colors.primary,
-              color: loading ? '#636E72' : '#FFFFFF',
-              fontFamily: 'Fredoka One, cursive',
-              fontSize: '1.2rem',
+              padding: '1rem 3rem', 
+              border: '1px solid #000000',
+              borderRadius: '0',
+              background: loading ? '#F8F8F8' : '#000000',
+              color: loading ? '#999' : '#FFFFFF',
+              fontSize: '0.75rem',
+              fontFamily: 'inherit',
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: loading ? 'none' : '4px 4px 0 #2D3436',
-              transform: loading ? 'none' : 'translate(-2px, -2px)',
-              transition: 'all 0.2s'
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              fontWeight: 300
             }}
           >
-            {loading ? '⏳ Making magic...' : '🚀 Create!'}
+            {loading ? 'Creating' : 'Create'}
           </button>
         </div>
 
-        {/* Status Log */}
+        {/* Status */}
         {log.length > 0 && (
           <div style={{ 
-            background: '#FFFFFF', 
-            border: '2px dashed ' + colors.soft, 
-            borderRadius: '16px', 
-            padding: '1rem', 
-            marginBottom: '1.5rem',
-            fontFamily: 'monospace',
-            fontSize: '13px',
-            color: '#636E72'
+            padding: '1rem 0',
+            marginBottom: '2rem',
+            fontSize: '0.75rem',
+            color: '#333333',
+            letterSpacing: '0.1em'
           }}>
-            {log.map((l, i) => (
-              <div key={i} style={{ marginBottom: '4px', color: colors.secondary }}>
-                {l}
-              </div>
-            ))}
+            {log.map((l, i) => <span key={i}>{l} </span>)}
           </div>
         )}
 
         {/* Error */}
         {error && (
           <div style={{ 
-            background: '#FFE5E5',
-            border: '2px solid ' + colors.primary,
-            borderRadius: '16px', 
-            padding: '1rem', 
-            marginBottom: '1.5rem',
-            color: colors.primary,
-            fontFamily: 'Nunito, sans-serif',
-            fontWeight: 600
+            padding: '1rem',
+            marginBottom: '2rem',
+            border: '1px solid #E0E0E0',
+            fontSize: '0.75rem',
+            color: '#333333'
           }}>
-            😢 {error}
+            {error}
           </div>
         )}
 
-        {/* Result - Generated Image */}
+        {/* Result - Image */}
         {image && (
-          <div style={{ 
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            overflow: 'hidden',
-            boxShadow: '8px 8px 0 ' + colors.accent,
-            border: '3px solid #2D3436',
-            marginBottom: '1.5rem'
-          }}>
+          <div style={{ marginBottom: '2rem' }}>
             <img 
               src={image} 
               alt="Generated" 
-              style={{ 
-                width: '100%', 
-                display: 'block'
-              }} 
+              style={{ width: '100%', display: 'block' }} 
             />
             <div style={{ 
-              padding: '1.5rem', 
+              padding: '1.5rem 0',
               display: 'flex',
-              gap: '1rem',
-              justifyContent: 'center',
-              flexWrap: 'wrap'
+              gap: '2rem',
+              borderBottom: '1px solid #E0E0E0'
             }}>
               <button 
                 onClick={vectorize}
                 disabled={vectorizing}
                 style={{ 
-                  padding: '1rem 2rem', 
-                  border: '3px solid #2D3436',
-                  borderRadius: '16px',
-                  background: vectorizing ? '#DFE6E9' : colors.secondary,
-                  color: '#FFFFFF',
-                  fontFamily: 'Fredoka One, cursive',
-                  fontSize: '1rem',
+                  padding: '0.75rem 0', 
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#000000',
+                  fontSize: '0.75rem',
+                  fontFamily: 'inherit',
                   cursor: vectorizing ? 'not-allowed' : 'pointer',
-                  boxShadow: vectorizing ? 'none' : '4px 4px 0 #2D3436'
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase'
                 }}
               >
-                {vectorizing ? '🔄 Vectorizing...' : '📐 Vectorize to SVG'}
+                {vectorizing ? 'Processing' : 'Vectorize'}
               </button>
               
               <button 
                 onClick={() => {
                   const a = document.createElement('a');
                   a.href = image;
-                  a.download = 'vectorvision-original.png';
+                  a.download = 'image.png';
                   a.click();
                 }}
                 style={{ 
-                  padding: '1rem 2rem', 
-                  border: '3px solid #2D3436',
-                  borderRadius: '16px',
-                  background: '#FFFFFF',
-                  color: '#2D3436',
-                  fontFamily: 'Fredoka One, cursive',
-                  fontSize: '1rem',
+                  padding: '0.75rem 0', 
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#333333',
+                  fontSize: '0.75rem',
+                  fontFamily: 'inherit',
                   cursor: 'pointer',
-                  boxShadow: '4px 4px 0 #2D3436'
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase'
                 }}
               >
-                ⬇️ Download PNG
+                PNG
               </button>
             </div>
           </div>
         )}
 
-        {/* Result - Vectorized SVG */}
+        {/* Result - SVG */}
         {svg && (
-          <div style={{ 
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            overflow: 'hidden',
-            boxShadow: '8px 8px 0 ' + colors.primary,
-            border: '3px solid #2D3436',
-            marginBottom: '1.5rem'
-          }}>
-            <div style={{ 
-              padding: '1rem', 
-              background: '#F8F9FA',
-              borderBottom: '2px solid #DFE6E9',
-              fontFamily: 'Fredoka One',
-              color: colors.secondary
-            }}>
-              🎉 Vectorized SVG Ready! (Editable vector paths)
-            </div>
+          <div style={{ marginBottom: '2rem' }}>
             <div 
               dangerouslySetInnerHTML={{ __html: svg }}
-              style={{ 
-                padding: '1rem',
-                background: '#FFFFFF',
-                maxHeight: '400px',
-                overflow: 'auto'
-              }}
+              style={{ padding: '1rem', background: '#F8F8F8' }}
             />
-            <div style={{ 
-              padding: '1.5rem', 
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'center'
-            }}>
+            <div style={{ padding: '1.5rem 0', borderBottom: '1px solid #E0E0E0' }}>
               <button 
                 onClick={downloadSVG}
                 style={{ 
-                  padding: '1rem 2rem', 
-                  border: '3px solid #2D3436',
-                  borderRadius: '16px',
-                  background: colors.primary,
-                  color: '#FFFFFF',
-                  fontFamily: 'Fredoka One, cursive',
-                  fontSize: '1rem',
+                  padding: '0.75rem 0', 
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#000000',
+                  fontSize: '0.75rem',
+                  fontFamily: 'inherit',
                   cursor: 'pointer',
-                  boxShadow: '4px 4px 0 #2D3436'
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase'
                 }}
               >
-                ⬇️ Download SVG
+                Download SVG
               </button>
             </div>
           </div>
         )}
 
         {/* Empty State */}
-        {!image && !loading && !error && (
+        {!image && !loading && (
           <div style={{ 
-            border: '3px dashed #DFE6E9', 
-            borderRadius: '24px', 
-            padding: '3rem 2rem', 
+            padding: '4rem 0', 
             textAlign: 'center',
-            color: '#636E72',
-            fontFamily: 'Nunito, sans-serif'
+            color: '#E0E0E0',
+            fontSize: '0.875rem',
+            letterSpacing: '0.1em'
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌈</div>
-            <p style={{ fontSize: '1.1rem' }}>
-              Tell me what you want to create<br/>
-              and I'll make it come to life!
-            </p>
+            Describe what you want to create
           </div>
         )}
       </main>
 
       {/* Footer */}
       <footer style={{ 
-        position: 'relative',
-        zIndex: 1,
         padding: '2rem',
         textAlign: 'center',
-        fontFamily: 'Nunito, sans-serif',
-        fontSize: '0.9rem',
-        color: '#636E72'
+        fontSize: '0.625rem',
+        color: '#E0E0E0',
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase'
       }}>
-        Made with <span style={{ color: colors.primary }}>❤️</span> and <span style={{ color: colors.secondary }}>✨</span>
+        Form follows function
       </footer>
     </div>
   );
