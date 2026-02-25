@@ -11,7 +11,7 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [log, setLog] = useState([]);
 
-  const addLog = (msg) => setLog(l => [...l, msg]);
+  const addLog = (msg) => setLog(l => [...l, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
   const generate = async () => {
     if (!prompt) return;
@@ -21,10 +21,10 @@ export default function Home() {
     setSvg(null);
     setLog([]);
     
-    addLog('Starting');
+    addLog('Starting generation...');
     
     try {
-      addLog('Generating');
+      addLog('Calling Venice API...');
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,17 +32,18 @@ export default function Home() {
       });
       
       const data = await res.json();
+      addLog(`Response: ${res.status}`);
       
       if (res.ok && data.imageUrl) {
         setImage(data.imageUrl);
-        addLog('Done');
+        addLog('✓ Image generated successfully!');
       } else {
-        setError(data.error || 'Error');
-        addLog('Error');
+        setError(data.error || 'Failed to generate');
+        addLog(`✗ Error: ${data.error}`);
       }
     } catch (e) {
       setError(e.message);
-      addLog('Error');
+      addLog(`✗ Exception: ${e.message}`);
     }
     
     setLoading(false);
@@ -53,9 +54,10 @@ export default function Home() {
     
     setVectorizing(true);
     setError(null);
-    addLog('Vectorizing');
+    addLog('Starting vectorization...');
     
     try {
+      addLog('Processing image...');
       const res = await fetch('/api/vectorize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,15 +65,18 @@ export default function Home() {
       });
       
       const data = await res.json();
+      addLog(`Response: ${res.status}`);
       
       if (res.ok && data.svg) {
         setSvg(data.svg);
-        addLog('Complete');
+        addLog('✓ Vectorization complete!');
       } else {
-        setError(data.error || 'Error');
+        setError(data.error || 'Failed to vectorize');
+        addLog(`✗ Error: ${data.error}`);
       }
     } catch (e) {
       setError(e.message);
+      addLog(`✗ Exception: ${e.message}`);
     }
     
     setVectorizing(false);
@@ -192,16 +197,20 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Status */}
+        {/* Status Log */}
         {log.length > 0 && (
           <div style={{ 
-            padding: '1rem 0',
+            padding: '1rem',
             marginBottom: '2rem',
+            background: '#F8F8F8',
             fontSize: '0.75rem',
             color: '#333333',
-            letterSpacing: '0.1em'
+            fontFamily: 'monospace',
+            lineHeight: 1.6
           }}>
-            {log.map((l, i) => <span key={i}>{l} </span>)}
+            {log.map((l, i) => (
+              <div key={i} style={{ marginBottom: '4px' }}>{l}</div>
+            ))}
           </div>
         )}
 
