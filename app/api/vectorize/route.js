@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import potrace from 'potrace';
 
 export async function POST(request) {
   try {
@@ -10,41 +11,33 @@ export async function POST(request) {
 
     console.log('Vectorizing image...');
     
-    // Get image as base64
-    let imageBase64;
+    // Get image as buffer
+    let buffer;
     if (imageUrl.startsWith('data:')) {
-      imageBase64 = imageUrl;
+      const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
+      buffer = Buffer.from(base64Data, 'base64');
     } else {
       const response = await fetch(imageUrl);
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      imageBase64 = `data:image/png;base64,${buffer.toString('base64')}`;
+      buffer = Buffer.from(arrayBuffer);
     }
     
-    console.log('Image loaded, tracing...');
+    console.log('Image buffer:', buffer.length, 'bytes');
     
-    // Dynamic import to avoid build issues
-    const ImageTracer = require('imagetracerjs');
-    
-    // Vectorize using ImageTracer with options for better quality
-    const svg = ImageTracer.imagedataToSVG(
-      imageBase64,
-      {
-        ltres: 0.1,
-        qtres: 0.1,
-        pathomit: 20,
-        colorsampling: 2,
-        numberofcolors: 16,
-        mincolorratio: 0.02,
-        colorquantcycles: 3,
-        scale: 1,
-        simplifytolerance: 0,
-        blurradius: 0,
-        blurdelta: 20,
-        strokewidth: 0,
-        linefilters: false
-      }
-    );
+    // Use potrace to vectorize
+    const svg = await new Promise((resolve, reject) => {
+      potrace.trace(buffer, {
+        turdSize: 10,
+        alphaMax: 1,
+        opticTolerance: 0.2,
+        blackThreshold: 0,
+        color: '#FF6B6B',
+        backgroundColor: '#FFFFFF'
+      }, (err, svg) => {
+        if (err) reject(err);
+        else resolve(svg);
+      });
+    });
     
     console.log('Vectorization complete, SVG length:', svg.length);
     
@@ -52,6 +45,6 @@ export async function POST(request) {
     
   } catch (e) {
     console.error('Vectorization error:', e);
-    return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 });
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
