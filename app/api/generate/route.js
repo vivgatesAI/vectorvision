@@ -18,7 +18,6 @@ export async function POST(request) {
     
     console.log('Calling Venice API with nano-banana-pro...');
     
-    // Correct endpoint and parameters from Venice API docs
     const res = await fetch('https://api.venice.ai/api/v1/image/generate', {
       method: 'POST',
       headers: {
@@ -39,7 +38,7 @@ export async function POST(request) {
     });
     
     const data = await res.json();
-    console.log('Venice response:', JSON.stringify(data).substring(0, 300));
+    console.log('Venice response received, processing...');
     
     if (!res.ok) {
       return NextResponse.json({ 
@@ -48,22 +47,50 @@ export async function POST(request) {
       }, { status: res.status });
     }
     
-    // Handle response - could be base64 or URL
-    let url = data.image || data.images?.[0]?.image || data.images?.[0]?.url || data.data?.[0]?.url;
+    // Handle base64 images from the images array
+    let imageBase64 = null;
     
-    // If it's base64, create a data URL
-    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
-      url = `data:image/png;base64,${url}`;
+    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+      // Images could be objects with 'image' property or direct strings
+      const firstImage = data.images[0];
+      if (typeof firstImage === 'string') {
+        imageBase64 = firstImage;
+      } else if (firstImage.image) {
+        imageBase64 = firstImage.image;
+      }
     }
     
-    if (!url) {
-      return NextResponse.json({ 
-        error: 'No image in response', 
-        fullResponse: data 
-      }, { status: 500 });
+    // Also check data.data
+    if (!imageBase64 && data.data && Array.isArray(data.data) && data.data.length > 0) {
+      const firstData = data.data[0];
+      if (typeof firstData === 'string') {
+        imageBase64 = firstData;
+      } else if (firstData.image) {
+        imageBase64 = firstData.image;
+      } else if (firstData.url) {
+        imageBase64 = firstData.url;
+      }
     }
     
-    return NextResponse.json({ imageUrl: url });
+    // If still nothing, check for direct image property
+    if (!imageBase64 && data.image) {
+      imageBase64 = data.image;
+    }
+    
+    if (imageBase64) {
+      // Ensure it's a data URL
+      const imageUrl = imageBase64.startsWith('data:') 
+        ? imageBase64 
+        : `data:image/png;base64,${imageBase64}`;
+      
+      console.log('Image extracted successfully, length:', imageUrl.length);
+      return NextResponse.json({ imageUrl });
+    }
+    
+    return NextResponse.json({ 
+      error: 'No image in response', 
+      fullResponse: JSON.stringify(data).substring(0, 500)
+    }, { status: 500 });
     
   } catch (e) {
     console.error('Generate error:', e);
