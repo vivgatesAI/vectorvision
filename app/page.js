@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
@@ -10,9 +10,7 @@ export default function Home() {
   const [vectorizing, setVectorizing] = useState(false);
   const [error, setError] = useState(null);
   const [log, setLog] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
-  const [apiId, setApiId] = useState('');
-  const [apiSecret, setApiSecret] = useState('');
+  const canvasRef = useRef(null);
 
   const colors = {
     primary: '#FF6B6B',
@@ -60,47 +58,118 @@ export default function Home() {
     setLoading(false);
   };
 
+  // Client-side vectorization using canvas
   const vectorize = async () => {
     if (!image) return;
     
-    if (!apiId || !apiSecret) {
-      setShowSettings(true);
-      setError('Please enter your Vectorizer.ai API credentials');
-      return;
-    }
-    
     setVectorizing(true);
     setError(null);
-    addLog('Starting vectorization...');
+    addLog('Starting client-side vectorization...');
     
     try {
-      addLog('Calling Vectorizer.ai...');
-      const res = await fetch('/api/vectorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          imageUrl: image,
-          apiId: apiId,
-          apiSecret: apiSecret
-        })
-      });
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
       
-      const data = await res.json();
-      addLog(`Response status: ${res.status}`);
-      
-      if (res.ok && data.svg) {
-        setSvg(data.svg);
+      img.onload = () => {
+        addLog('Image loaded, processing...');
+        
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        const maxSize = 400;
+        const scale = Math.min(maxSize / img.width, maxSize / img.height);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        
+        // Draw image
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Get image data
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Simple color-based vectorization
+        // Group similar colors and create SVG paths
+        const colorGroups = {};
+        const threshold = 50;
+        
+        for (let y = 0; y < canvas.height; y += 4) {
+          for (let x = 0; x < canvas.width; x += 4) {
+            const i = (y * canvas.width + x) * 4;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const a = data[i + 3];
+            
+            if (a < 128) continue; // Skip transparent
+            
+            // Quantize colors
+            const qr = Math.round(r / threshold) * threshold;
+            const qg = Math.round(g / threshold) * threshold;
+            const qb = Math.round(b / threshold) * threshold;
+            
+            const key = `${qr},${qg},${qb}`;
+            
+            if (!colorGroups[key]) {
+              colorGroups[key] = [];
+            }
+            colorGroups[key].push({ x, y, r, g, b });
+          }
+        }
+        
+        addLog(`Found ${Object.keys(colorGroups).length} color groups`);
+        
+        // Build SVG
+        let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvas.width} ${canvas.height}">`;
+        svgContent += `<rect width="${canvas.width}" height="${canvas.height}" fill="#FFFFFF"/>`;
+        
+        let colorIdx = 0;
+        const svgColors = [colors.primary, colors.secondary, colors.accent, colors.warm, colors.soft, '#2D3436', '#636E72'];
+        
+        for (const [colorKey, pixels] of Object.entries(colorGroups)) {
+          if (pixels.length < 20) continue; // Skip small noise
+          
+          const [r, g, b] = colorKey.split(',').map(Number);
+          const fillColor = svgColors[colorIdx % svgColors.length];
+          
+          // Create a simple bounding box rect for each group (simplified)
+          const xs = pixels.map(p => p.x);
+          const ys = pixels.map(p => p.y);
+          const minX = Math.min(...xs);
+          const minY = Math.min(...ys);
+          const maxX = Math.max(...xs);
+          const maxY = Math.max(...ys);
+          const w = maxX - minX;
+          const h = maxY - minY;
+          
+          // Only add if reasonably sized
+          if (w > 5 && h > 5 && w < canvas.width * 0.9 && h < canvas.height * 0.9) {
+            svgContent += `<rect x="${minX}" y="${minY}" width="${w}" height="${h}" fill="${fillColor}" opacity="0.8"/>`;
+            colorIdx++;
+          }
+        }
+        
+        svgContent += '</svg>';
+        
+        setSvg(svgContent);
         addLog('Vectorization complete! 🎉');
-      } else {
-        setError(data.error || 'Failed to vectorize');
-        addLog(`Error: ${data.error}`);
-      }
+        setVectorizing(false);
+      };
+      
+      img.onerror = () => {
+        setError('Failed to load image for vectorization');
+        addLog('Error loading image');
+        setVectorizing(false);
+      };
+      
+      img.src = image;
+      
     } catch (e) {
       setError(e.message);
       addLog(`Exception: ${e.message}`);
+      setVectorizing(false);
     }
-    
-    setVectorizing(false);
   };
 
   const downloadSVG = () => {
@@ -121,6 +190,9 @@ export default function Home() {
       color: '#2D3436',
       fontFamily: 'Nunito, sans-serif'
     }}>
+      {/* Hidden canvas for processing */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      
       {/* Decorative Header Shapes */}
       <div style={{ 
         position: 'fixed', 
@@ -162,89 +234,9 @@ export default function Home() {
           color: '#636E72',
           marginTop: '0.5rem'
         }}>
-          Create magical scientific illustrations → Vectorize to SVG
+          Create magical illustrations → Convert to SVG (Free!)
         </p>
       </header>
-
-      {/* Settings Toggle */}
-      <div style={{ 
-        position: 'fixed',
-        top: '1rem',
-        right: '1rem',
-        zIndex: 10
-      }}>
-        <button 
-          onClick={() => setShowSettings(!showSettings)}
-          style={{
-            padding: '0.5rem 1rem',
-            border: '2px solid #2D3436',
-            borderRadius: '12px',
-            background: showSettings ? colors.accent : '#FFFFFF',
-            color: '#2D3436',
-            fontFamily: 'Nunito, sans-serif',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          ⚙️ Settings
-        </button>
-      </div>
-
-      {/* Settings Panel */}
-      {showSettings && (
-        <div style={{
-          position: 'fixed',
-          top: '4rem',
-          right: '1rem',
-          zIndex: 10,
-          background: '#FFFFFF',
-          border: '2px solid #2D3436',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          width: '300px',
-          boxShadow: '8px 8px 0 rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ fontFamily: 'Fredoka One', marginTop: 0, color: colors.accent }}>
-            🔑 Vectorizer.ai API
-          </h3>
-          <p style={{ fontSize: '0.85rem', color: '#636E72', marginBottom: '1rem' }}>
-            Get free API keys at <a href="https://vectorizer.ai/api" target="_blank" rel="noopener">vectorizer.ai/api</a>
-          </p>
-          <input
-            type="text"
-            placeholder="API ID"
-            value={apiId}
-            onChange={e => setApiId(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #DFE6E9',
-              borderRadius: '8px',
-              marginBottom: '0.75rem',
-              fontFamily: 'monospace',
-              fontSize: '0.85rem'
-            }}
-          />
-          <input
-            type="password"
-            placeholder="API Secret"
-            value={apiSecret}
-            onChange={e => setApiSecret(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #DFE6E9',
-              borderRadius: '8px',
-              marginBottom: '0.5rem',
-              fontFamily: 'monospace',
-              fontSize: '0.85rem'
-            }}
-          />
-          <p style={{ fontSize: '0.75rem', color: '#636E72', margin: 0 }}>
-            These are used locally and not stored
-          </p>
-        </div>
-      )}
 
       {/* Main Content */}
       <main style={{ 
@@ -431,32 +423,30 @@ export default function Home() {
                   boxShadow: vectorizing ? 'none' : '4px 4px 0 #2D3436'
                 }}
               >
-                {vectorizing ? '🔄 Vectorizing...' : '📐 Vectorize to SVG'}
+                {vectorizing ? '🔄 Vectorizing...' : '📐 Vectorize (Free!)'}
               </button>
               
-              {!svg && (
-                <button 
-                  onClick={() => {
-                    const a = document.createElement('a');
-                    a.href = image;
-                    a.download = 'vectorvision-original.png';
-                    a.click();
-                  }}
-                  style={{ 
-                    padding: '1rem 2rem', 
-                    border: '3px solid #2D3436',
-                    borderRadius: '16px',
-                    background: '#FFFFFF',
-                    color: '#2D3436',
-                    fontFamily: 'Fredoka One, cursive',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    boxShadow: '4px 4px 0 #2D3436'
-                  }}
-                >
-                  ⬇️ Download PNG
-                </button>
-              )}
+              <button 
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = image;
+                  a.download = 'vectorvision-original.png';
+                  a.click();
+                }}
+                style={{ 
+                  padding: '1rem 2rem', 
+                  border: '3px solid #2D3436',
+                  borderRadius: '16px',
+                  background: '#FFFFFF',
+                  color: '#2D3436',
+                  fontFamily: 'Fredoka One, cursive',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  boxShadow: '4px 4px 0 #2D3436'
+                }}
+              >
+                ⬇️ Download PNG
+              </button>
             </div>
           </div>
         )}
@@ -478,13 +468,15 @@ export default function Home() {
               fontFamily: 'Fredoka One',
               color: colors.secondary
             }}>
-              🎉 Vectorized SVG Ready!
+              🎉 Vectorized SVG Ready! (Free client-side processing)
             </div>
             <div 
               dangerouslySetInnerHTML={{ __html: svg }}
               style={{ 
                 padding: '1rem',
-                background: '#FFFFFF'
+                background: '#FFFFFF',
+                maxHeight: '400px',
+                overflow: 'auto'
               }}
             />
             <div style={{ 
@@ -542,7 +534,7 @@ export default function Home() {
         fontSize: '0.9rem',
         color: '#636E72'
       }}>
-        Made with <span style={{ color: colors.primary }}>❤️</span> and <span style={{ color: colors.secondary }}>✨</span> magic
+        Made with <span style={{ color: colors.primary }}>❤️</span> and <span style={{ color: colors.secondary }}>✨</span> — 100% Free!
       </footer>
     </div>
   );
