@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import ImageTracer from 'imagetracerjs';
 
 export async function POST(request) {
   try {
@@ -22,21 +21,26 @@ export async function POST(request) {
       imageBase64 = `data:image/png;base64,${buffer.toString('base64')}`;
     }
     
-    // Vectorize using ImageTracer
+    console.log('Image loaded, tracing...');
+    
+    // Dynamic import to avoid build issues
+    const ImageTracer = require('imagetracerjs');
+    
+    // Vectorize using ImageTracer with options for better quality
     const svg = ImageTracer.imagedataToSVG(
       imageBase64,
       {
-        ltres: 1,
-        qtres: 1,
-        pathomit: 8,
+        ltres: 0.1,
+        qtres: 0.1,
+        pathomit: 20,
         colorsampling: 2,
-        numberofcolors: 8,
-        mincolorratio: 0,
+        numberofcolors: 16,
+        mincolorratio: 0.02,
         colorquantcycles: 3,
         scale: 1,
         simplifytolerance: 0,
         blurradius: 0,
-        blurdelta: 10,
+        blurdelta: 20,
         strokewidth: 0,
         linefilters: false
       }
@@ -48,6 +52,6 @@ export async function POST(request) {
     
   } catch (e) {
     console.error('Vectorization error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 });
   }
 }
