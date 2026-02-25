@@ -5,9 +5,14 @@ export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('watercolor');
   const [image, setImage] = useState(null);
+  const [svg, setSvg] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [vectorizing, setVectorizing] = useState(false);
   const [error, setError] = useState(null);
   const [log, setLog] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiId, setApiId] = useState('');
+  const [apiSecret, setApiSecret] = useState('');
 
   const colors = {
     primary: '#FF6B6B',
@@ -24,6 +29,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setImage(null);
+    setSvg(null);
     setLog([]);
     
     addLog('Starting generation...');
@@ -54,6 +60,60 @@ export default function Home() {
     setLoading(false);
   };
 
+  const vectorize = async () => {
+    if (!image) return;
+    
+    if (!apiId || !apiSecret) {
+      setShowSettings(true);
+      setError('Please enter your Vectorizer.ai API credentials');
+      return;
+    }
+    
+    setVectorizing(true);
+    setError(null);
+    addLog('Starting vectorization...');
+    
+    try {
+      addLog('Calling Vectorizer.ai...');
+      const res = await fetch('/api/vectorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageUrl: image,
+          apiId: apiId,
+          apiSecret: apiSecret
+        })
+      });
+      
+      const data = await res.json();
+      addLog(`Response status: ${res.status}`);
+      
+      if (res.ok && data.svg) {
+        setSvg(data.svg);
+        addLog('Vectorization complete! 🎉');
+      } else {
+        setError(data.error || 'Failed to vectorize');
+        addLog(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      setError(e.message);
+      addLog(`Exception: ${e.message}`);
+    }
+    
+    setVectorizing(false);
+  };
+
+  const downloadSVG = () => {
+    if (!svg) return;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vectorvision-vector.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -77,6 +137,7 @@ export default function Home() {
       <div style={{ position: 'fixed', top: '10%', left: '5%', fontSize: '40px', opacity: 0.3, zIndex: 0 }}>🎨</div>
       <div style={{ position: 'fixed', top: '20%', right: '8%', fontSize: '30px', opacity: 0.3, zIndex: 0 }}>✏️</div>
       <div style={{ position: 'fixed', bottom: '15%', left: '10%', fontSize: '25px', opacity: 0.3, zIndex: 0 }}>🖌️</div>
+      <div style={{ position: 'fixed', bottom: '20%', right: '5%', fontSize: '35px', opacity: 0.3, zIndex: 0 }}>📐</div>
 
       {/* Header */}
       <header style={{ 
@@ -101,9 +162,89 @@ export default function Home() {
           color: '#636E72',
           marginTop: '0.5rem'
         }}>
-          Create magical scientific illustrations with AI
+          Create magical scientific illustrations → Vectorize to SVG
         </p>
       </header>
+
+      {/* Settings Toggle */}
+      <div style={{ 
+        position: 'fixed',
+        top: '1rem',
+        right: '1rem',
+        zIndex: 10
+      }}>
+        <button 
+          onClick={() => setShowSettings(!showSettings)}
+          style={{
+            padding: '0.5rem 1rem',
+            border: '2px solid #2D3436',
+            borderRadius: '12px',
+            background: showSettings ? colors.accent : '#FFFFFF',
+            color: '#2D3436',
+            fontFamily: 'Nunito, sans-serif',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          ⚙️ Settings
+        </button>
+      </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div style={{
+          position: 'fixed',
+          top: '4rem',
+          right: '1rem',
+          zIndex: 10,
+          background: '#FFFFFF',
+          border: '2px solid #2D3436',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          width: '300px',
+          boxShadow: '8px 8px 0 rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ fontFamily: 'Fredoka One', marginTop: 0, color: colors.accent }}>
+            🔑 Vectorizer.ai API
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: '#636E72', marginBottom: '1rem' }}>
+            Get free API keys at <a href="https://vectorizer.ai/api" target="_blank" rel="noopener">vectorizer.ai/api</a>
+          </p>
+          <input
+            type="text"
+            placeholder="API ID"
+            value={apiId}
+            onChange={e => setApiId(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #DFE6E9',
+              borderRadius: '8px',
+              marginBottom: '0.75rem',
+              fontFamily: 'monospace',
+              fontSize: '0.85rem'
+            }}
+          />
+          <input
+            type="password"
+            placeholder="API Secret"
+            value={apiSecret}
+            onChange={e => setApiSecret(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '2px solid #DFE6E9',
+              borderRadius: '8px',
+              marginBottom: '0.5rem',
+              fontFamily: 'monospace',
+              fontSize: '0.85rem'
+            }}
+          />
+          <p style={{ fontSize: '0.75rem', color: '#636E72', margin: 0 }}>
+            These are used locally and not stored
+          </p>
+        </div>
+      )}
 
       {/* Main Content */}
       <main style={{ 
@@ -147,8 +288,7 @@ export default function Home() {
               fontSize: '1rem',
               minHeight: '100px', 
               resize: 'vertical',
-              outline: 'none',
-              transition: 'border-color 0.3s'
+              outline: 'none'
             }} 
           />
         </div>
@@ -157,7 +297,7 @@ export default function Home() {
         <div style={{ 
           display: 'flex', 
           gap: '1rem', 
-          alignItems: 'stretch',
+          alignItems: 'flex-end',
           marginBottom: '2rem',
           flexWrap: 'wrap'
         }}>
@@ -194,27 +334,25 @@ export default function Home() {
             </select>
           </div>
           
-          <div style={{ alignSelf: 'flex-end' }}>
-            <button 
-              onClick={generate} 
-              disabled={loading || !prompt}
-              style={{ 
-                padding: '1rem 2.5rem', 
-                border: '3px solid #2D3436',
-                borderRadius: '16px',
-                background: loading ? '#DFE6E9' : colors.primary,
-                color: loading ? '#636E72' : '#FFFFFF',
-                fontFamily: 'Fredoka One, cursive',
-                fontSize: '1.2rem',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '4px 4px 0 #2D3436',
-                transform: loading ? 'none' : 'translate(-2px, -2px)',
-                transition: 'all 0.2s'
-              }}
-            >
-              {loading ? '⏳ Making magic...' : '🚀 Create!'}
-            </button>
-          </div>
+          <button 
+            onClick={generate} 
+            disabled={loading || !prompt}
+            style={{ 
+              padding: '1rem 2.5rem', 
+              border: '3px solid #2D3436',
+              borderRadius: '16px',
+              background: loading ? '#DFE6E9' : colors.primary,
+              color: loading ? '#636E72' : '#FFFFFF',
+              fontFamily: 'Fredoka One, cursive',
+              fontSize: '1.2rem',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: loading ? 'none' : '4px 4px 0 #2D3436',
+              transform: loading ? 'none' : 'translate(-2px, -2px)',
+              transition: 'all 0.2s'
+            }}
+          >
+            {loading ? '⏳ Making magic...' : '🚀 Create!'}
+          </button>
         </div>
 
         {/* Status Log */}
@@ -253,14 +391,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* Result */}
+        {/* Result - Generated Image */}
         {image && (
           <div style={{ 
             background: '#FFFFFF',
             borderRadius: '24px',
             overflow: 'hidden',
             boxShadow: '8px 8px 0 ' + colors.accent,
-            border: '3px solid #2D3436'
+            border: '3px solid #2D3436',
+            marginBottom: '1.5rem'
           }}>
             <img 
               src={image} 
@@ -272,16 +411,104 @@ export default function Home() {
             />
             <div style={{ 
               padding: '1.5rem', 
-              textAlign: 'center',
-              background: colors.soft + '30'
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center',
+              flexWrap: 'wrap'
             }}>
-              <span style={{ 
-                fontFamily: 'Fredoka One, cursive',
-                fontSize: '1.2rem',
-                color: colors.secondary
-              }}>
-                🎉 Your creation is ready!
-              </span>
+              <button 
+                onClick={vectorize}
+                disabled={vectorizing}
+                style={{ 
+                  padding: '1rem 2rem', 
+                  border: '3px solid #2D3436',
+                  borderRadius: '16px',
+                  background: vectorizing ? '#DFE6E9' : colors.secondary,
+                  color: '#FFFFFF',
+                  fontFamily: 'Fredoka One, cursive',
+                  fontSize: '1rem',
+                  cursor: vectorizing ? 'not-allowed' : 'pointer',
+                  boxShadow: vectorizing ? 'none' : '4px 4px 0 #2D3436'
+                }}
+              >
+                {vectorizing ? '🔄 Vectorizing...' : '📐 Vectorize to SVG'}
+              </button>
+              
+              {!svg && (
+                <button 
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = image;
+                    a.download = 'vectorvision-original.png';
+                    a.click();
+                  }}
+                  style={{ 
+                    padding: '1rem 2rem', 
+                    border: '3px solid #2D3436',
+                    borderRadius: '16px',
+                    background: '#FFFFFF',
+                    color: '#2D3436',
+                    fontFamily: 'Fredoka One, cursive',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    boxShadow: '4px 4px 0 #2D3436'
+                  }}
+                >
+                  ⬇️ Download PNG
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Result - Vectorized SVG */}
+        {svg && (
+          <div style={{ 
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            overflow: 'hidden',
+            boxShadow: '8px 8px 0 ' + colors.primary,
+            border: '3px solid #2D3436',
+            marginBottom: '1.5rem'
+          }}>
+            <div style={{ 
+              padding: '1rem', 
+              background: '#F8F9FA',
+              borderBottom: '2px solid #DFE6E9',
+              fontFamily: 'Fredoka One',
+              color: colors.secondary
+            }}>
+              🎉 Vectorized SVG Ready!
+            </div>
+            <div 
+              dangerouslySetInnerHTML={{ __html: svg }}
+              style={{ 
+                padding: '1rem',
+                background: '#FFFFFF'
+              }}
+            />
+            <div style={{ 
+              padding: '1.5rem', 
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center'
+            }}>
+              <button 
+                onClick={downloadSVG}
+                style={{ 
+                  padding: '1rem 2rem', 
+                  border: '3px solid #2D3436',
+                  borderRadius: '16px',
+                  background: colors.primary,
+                  color: '#FFFFFF',
+                  fontFamily: 'Fredoka One, cursive',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  boxShadow: '4px 4px 0 #2D3436'
+                }}
+              >
+                ⬇️ Download SVG
+              </button>
             </div>
           </div>
         )}

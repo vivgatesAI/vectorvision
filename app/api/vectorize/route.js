@@ -2,53 +2,75 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { imageUrl } = await request.json();
+    const { imageUrl, apiId, apiSecret } = await request.json();
     
     if (!imageUrl) {
       return NextResponse.json({ error: 'No image URL provided' }, { status: 400 });
     }
+
+    // Get credentials from request or environment
+    const vectorizerApiId = apiId || process.env.VECTORIZER_API_ID;
+    const vectorizerApiSecret = apiSecret || process.env.VECTORIZER_API_SECRET;
     
-    // Download and process image using canvas-based approach
-    // Since we can't use sharp/potrace on Railway easily, return a placeholder that shows the concept
+    if (!vectorizerApiId || !vectorizerApiSecret) {
+      return NextResponse.json({ error: 'Vectorizer.ai credentials not configured' }, { status: 500 });
+    }
+
+    console.log('Calling Vectorizer.ai...');
     
-    // Create a basic SVG from the image URL
-    // In a full implementation, you'd use a service or run this client-side
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-      <rect width="800" height="600" fill="#0a0a0f"/>
-      <defs>
-        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#ff6b35;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#4ecdc4;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <g id="component-1">
-        <circle cx="400" cy="280" r="120" fill="url(#grad)" fill-opacity="0.8"/>
-        <text x="400" y="290" text-anchor="middle" fill="#fff" font-family="Inter, sans-serif" font-size="24">Generated Vector</text>
-      </g>
-      <g id="component-2">
-        <rect x="250" y="430" width="300" height="60" rx="10" fill="#4ecdc4" fill-opacity="0.6"/>
-        <text x="400" y="465" text-anchor="middle" fill="#fff" font-family="Inter, sans-serif" font-size="16">Component 2</text>
-      </g>
-      <g id="component-3">
-        <path d="M150 150 Q 250 100 350 150 T 550 150" stroke="#ff6b35" stroke-width="3" fill="none" stroke-opacity="0.7"/>
-      </g>
-    </svg>`;
+    // First, fetch the image and convert to base64
+    let imageBuffer;
+    if (imageUrl.startsWith('data:')) {
+      // Already base64
+      const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
+      imageBuffer = Buffer.from(base64Data, 'base64');
+    } else {
+      // Fetch from URL
+      const response = await fetch(imageUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      imageBuffer = Buffer.from(arrayBuffer);
+    }
     
-    const components = [
-      { id: 1, type: 'circle', color: '#ff6b35', label: 'Main Visual' },
-      { id: 2, type: 'rect', color: '#4ecdc4', label: 'Secondary Element' },
-      { id: 3, type: 'path', color: '#ff6b35', label: 'Decorative Element' }
-    ];
+    // Create form data for Vectorizer.ai
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('image', imageBuffer, { filename: 'image.png', contentType: 'image/png' });
+    form.append('format', 'svg');
     
-    return NextResponse.json({
-      svg,
-      components,
-      dimensions: { width: 800, height: 600 },
-      note: 'Simplified vectorization - full potrace integration requires local build'
+    // Make request to Vectorizer.ai
+    const res = await fetch('https://vectorizer.ai/api/v1/vectorize', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(`${vectorizerApiId}:${vectorizerApiSecret}`).toString('base64'),
+        ...form.getHeaders()
+      },
+      body: form
     });
     
-  } catch (error) {
-    console.error('Vectorization error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const data = await res.json();
+    console.log('Vectorizer.ai response status:', res.status);
+    
+    if (!res.ok) {
+      return NextResponse.json({ 
+        error: data.error || data.message || `Vectorizer.ai error: ${res.status}`, 
+        details: data 
+      }, { status: res.status });
+    }
+    
+    // Vectorizer.ai returns the SVG directly
+    const svg = data.result?.svg || data.svg;
+    
+    if (!svg) {
+      return NextResponse.json({ 
+        error: 'No SVG in response', 
+        fullResponse: JSON.stringify(data).substring(0, 500)
+      }, { status: 500 });
+    }
+    
+    return NextResponse.json({ svg });
+    
+  } catch (e) {
+    console.error('Vectorize error:', e);
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
