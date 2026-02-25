@@ -16,10 +16,10 @@ export async function POST(request) {
 
     const enhanced = `Highly detailed ${style} scientific illustration: ${prompt}. Soft flowing brush textures, vibrant colors, elegant layout, detailed.`;
     
-    console.log('Calling Venice API...');
+    console.log('Calling Venice API with nano-banana-pro...');
     
-    // Try the image generations endpoint
-    const res = await fetch('https://api.venice.ai/api/v1/image/generations', {
+    // Correct endpoint and parameters from Venice API docs
+    const res = await fetch('https://api.venice.ai/api/v1/image/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -30,7 +30,11 @@ export async function POST(request) {
         prompt: enhanced,
         cfg_scale: 7.5,
         steps: 30,
-        hide_watermark: false
+        hide_watermark: false,
+        width: 1024,
+        height: 1024,
+        aspect_ratio: '1:1',
+        format: 'png'
       })
     });
     
@@ -44,8 +48,13 @@ export async function POST(request) {
       }, { status: res.status });
     }
     
-    // Try to get image from various response formats
-    let url = data.image_url || data.images?.[0]?.url || data.images?.[0]?.base64 || data.data?.[0]?.url;
+    // Handle response - could be base64 or URL
+    let url = data.image || data.images?.[0]?.image || data.images?.[0]?.url || data.data?.[0]?.url;
+    
+    // If it's base64, create a data URL
+    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+      url = `data:image/png;base64,${url}`;
+    }
     
     if (!url) {
       return NextResponse.json({ 
