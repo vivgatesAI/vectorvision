@@ -48,70 +48,198 @@ export default function Home() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', color: '#fff', padding: '2rem', fontFamily: 'system-ui' }}>
-      <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', margin: 0, background: 'linear-gradient(135deg,#ff6b35,#4ecdc4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>VectorVision</h1>
-        <p style={{ color: '#888', margin: '0.5rem 0 0' }}>AI Scientific Visualization → Editable Vectors</p>
+    <div style={{ minHeight: '100vh', background: '#000000', color: '#FFFFFF' }}>
+      {/* Header */}
+      <header style={{ 
+        borderBottom: '1px solid #333333', 
+        padding: '2rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <h1 style={{ 
+          fontFamily: 'Grotesk Nova, sans-serif', 
+          fontSize: '1.5rem', 
+          fontWeight: 400,
+          margin: 0,
+          letterSpacing: '0.05em'
+        }}>
+          VECTORVISION
+        </h1>
+        <span style={{ 
+          fontFamily: 'Inter, sans-serif', 
+          fontSize: '0.75rem', 
+          color: '#C0C0C0',
+          letterSpacing: '0.1em'
+        }}>
+          SCIENTIFIC VISUALIZATION
+        </span>
       </header>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ background: '#16161a', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+      {/* Main Content */}
+      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '4rem 2rem' }}>
+        
+        {/* Input Section */}
+        <div style={{ marginBottom: '3rem' }}>
+          <label style={{ 
+            display: 'block',
+            fontFamily: 'Grotesk Nova, sans-serif',
+            fontSize: '0.875rem',
+            color: '#C0C0C0',
+            marginBottom: '0.75rem',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase'
+          }}>
+            Description
+          </label>
           <textarea 
             value={prompt} 
             onChange={e => setPrompt(e.target.value)} 
-            placeholder="Describe your scientific visualization (e.g., 'A detailed diagram of a plant cell with organelles')" 
-            style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid #333', background: '#0a0a0f', color: '#fff', fontSize: '1rem', minHeight: '100px', resize: 'vertical' }} 
+            placeholder="Describe your visualization..."
+            style={{ 
+              width: '100%', 
+              padding: '1.5rem', 
+              border: '1px solid #333333',
+              background: '#0a0a0a',
+              color: '#FFFFFF',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '1rem',
+              minHeight: '120px', 
+              resize: 'vertical',
+              outline: 'none'
+            }} 
           />
-          
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+        </div>
+
+        {/* Controls */}
+        <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-end', marginBottom: '3rem' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ 
+              display: 'block',
+              fontFamily: 'Grotesk Nova, sans-serif',
+              fontSize: '0.875rem',
+              color: '#C0C0C0',
+              marginBottom: '0.75rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase'
+            }}>
+              Style
+            </label>
             <select 
               value={style} 
               onChange={e => setStyle(e.target.value)} 
-              style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #333', background: '#0a0a0f', color: '#fff' }}
+              style={{ 
+                width: '100%',
+                padding: '1rem 1.5rem', 
+                border: '1px solid #333333',
+                background: '#0a0a0a',
+                color: '#FFFFFF',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '1rem',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
             >
-              <option value="watercolor">🎨 Watercolor Whimsical</option>
-              <option value="scientific">🔬 Scientific Diagram</option>
-              <option value="schematic">📐 Technical Schematic</option>
+              <option value="watercolor">Watercolor Whimsical</option>
+              <option value="scientific">Scientific Diagram</option>
+              <option value="schematic">Technical Schematic</option>
+              <option value="illustration">Detailed Illustration</option>
             </select>
-            
-            <button 
-              onClick={generate} 
-              disabled={loading || !prompt} 
-              style={{ padding: '0.75rem 2rem', borderRadius: '8px', border: 'none', background: loading ? '#666' : 'linear-gradient(135deg,#ff6b35,#4ecdc4)', color: '#fff', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer' }}
-            >
-              {loading ? '⏳ Generating...' : '✨ Generate'}
-            </button>
           </div>
+          
+          <button 
+            onClick={generate} 
+            disabled={loading || !prompt}
+            style={{ 
+              padding: '1rem 3rem', 
+              border: loading ? '1px solid #333333' : '1px solid #FFFFFF',
+              background: loading ? '#0a0a0a' : '#FFFFFF',
+              color: loading ? '#666666' : '#000000',
+              fontFamily: 'Grotesk Nova, sans-serif',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              letterSpacing: '0.1em',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              textTransform: 'uppercase',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {loading ? 'Generating...' : 'Generate'}
+          </button>
         </div>
 
         {/* Status Log */}
         {log.length > 0 && (
-          <div style={{ background: '#111', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem', fontSize: '12px', fontFamily: 'monospace' }}>
-            {log.map((l, i) => <div key={i} style={{ color: '#4ecdc4', marginBottom: '4px' }}>{l}</div>)}
+          <div style={{ 
+            background: '#0a0a0a', 
+            border: '1px solid #333333', 
+            padding: '1rem', 
+            marginBottom: '2rem',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            color: '#C0C0C0'
+          }}>
+            {log.map((l, i) => <div key={i} style={{ marginBottom: '4px' }}>{l}</div>)}
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div style={{ background: '#3a1a1a', border: '1px solid #f00', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem', color: '#ff6b6b' }}>
-            Error: {error}
+          <div style={{ 
+            border: '1px solid #ff3333', 
+            padding: '1rem', 
+            marginBottom: '2rem',
+            color: '#ff3333',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '0.875rem'
+          }}>
+            {error}
           </div>
         )}
 
         {/* Result */}
         {image && (
-          <div style={{ background: '#16161a', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' }}>
-            <img src={image} alt="Generated" style={{ maxWidth: '100%', borderRadius: '8px' }} />
-            <p style={{ color: '#4ecdc4', marginTop: '1rem' }}>✅ Image generated! (Vectorize feature coming soon)</p>
+          <div style={{ border: '1px solid #333333' }}>
+            <img 
+              src={image} 
+              alt="Generated" 
+              style={{ 
+                width: '100%', 
+                display: 'block',
+                borderBottom: '1px solid #333333'
+              }} 
+            />
+            <div style={{ padding: '1rem', textAlign: 'center', color: '#C0C0C0', fontFamily: 'Inter, sans-serif', fontSize: '0.875rem' }}>
+              ✓ Image generated
+            </div>
           </div>
         )}
 
+        {/* Empty State */}
         {!image && !loading && !error && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#666', background: '#16161a', borderRadius: '12px' }}>
-            <p>Enter a description above and click Generate</p>
+          <div style={{ 
+            border: '1px solid #333333', 
+            padding: '4rem 2rem', 
+            textAlign: 'center',
+            color: '#666666',
+            fontFamily: 'Inter, sans-serif'
+          }}>
+            <p>Enter a description and click Generate</p>
           </div>
         )}
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer style={{ 
+        borderTop: '1px solid #333333', 
+        padding: '2rem',
+        textAlign: 'center',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '0.75rem',
+        color: '#666666'
+      }}>
+        VECTORVISION — FORM FOLLOWS FUNCTION
+      </footer>
     </div>
   );
 }
